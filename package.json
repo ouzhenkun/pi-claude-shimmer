@@ -27,7 +27,6 @@
   "pi": {
     "extensions": [
       "./index.ts"
-    ],
-    "image": "https://raw.githubusercontent.com/ouzhenkun/pi-claude-shimmer/main/screenshot.png"
+    ]
   }
 }
