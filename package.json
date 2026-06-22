@@ -1,6 +1,6 @@
 {
   "name": "pi-claude-shimmer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Claude Code-style working spinner for Pi — shimmer, thinking glow, token count, stall detection",
   "keywords": [
     "pi",
