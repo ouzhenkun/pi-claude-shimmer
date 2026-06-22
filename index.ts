@@ -469,17 +469,8 @@ export default function (pi: ExtensionAPI) {
     turnActive = false;
     stopShimmer();
 
-    const tid = turnId;
-    const elapsed = Date.now() - (agentStart || turnStart);
-
     if (thinkingDuration !== null && Date.now() - thoughtSetAt >= THOUGHT_DISPLAY_MS) {
       thinkingDuration = null;
-    }
-
-    if (ctx_?.ui) {
-      const verb = COMPLETION_VERBS[Math.floor(Math.random() * COMPLETION_VERBS.length)];
-      const msg = `${DIM}✻ ${verb} for ${formatDuration(elapsed)}${RESET}`;
-      ctx_.ui.notify(msg, "success");
     }
 
     responseLen = 0;
@@ -488,8 +479,18 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("agent_end", async () => {
     turnActive = false;
-    agentStart = 0;
     stopShimmer();
+
+    // Save elapsed before resetting turn state
+    const elapsed = Date.now() - (turnStart || agentStart || Date.now());
+
+    agentStart = 0;
+
+    if (ctx_?.ui) {
+      const verb = COMPLETION_VERBS[Math.floor(Math.random() * COMPLETION_VERBS.length)];
+      const msg = `${DIM}✻ ${verb} for ${formatDuration(elapsed)}${RESET}`;
+      ctx_.ui.notify(msg, "success");
+    }
   });
 
   pi.on("session_shutdown", async () => {
