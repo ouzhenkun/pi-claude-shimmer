@@ -1,0 +1,33 @@
+{
+  "name": "pi-claude-shimmer",
+  "version": "1.0.0",
+  "description": "Claude Code-style working spinner for Pi — shimmer, thinking glow, token count, stall detection",
+  "keywords": [
+    "pi",
+    "pi-package",
+    "pi-extension",
+    "spinner",
+    "shimmer",
+    "working-indicator",
+    "claude-code"
+  ],
+  "license": "MIT",
+  "author": "ouzhenkun",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ouzhenkun/pi-claude-shimmer.git"
+  },
+  "homepage": "https://github.com/ouzhenkun/pi-claude-shimmer",
+  "bugs": {
+    "url": "https://github.com/ouzhenkun/pi-claude-shimmer/issues"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "image": "https://raw.githubusercontent.com/ouzhenkun/pi-claude-shimmer/main/screenshot.png"
+  }
+}
