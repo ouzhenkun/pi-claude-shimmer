@@ -33,7 +33,7 @@ const VERBS = [
 // Past tense verbs for turn completion messages (from Claude Code)
 const COMPLETION_VERBS = [
   "Baked", "Brewed", "Churned", "Cogitated",
-  "Cooked", "Crunched", "Sautéed", "Worked",
+  "Cooked", "Crunched", "Sautéed",
 ];
 
 // ─── Glyphs ───────────────────────────────────────────────────────
@@ -370,13 +370,9 @@ export default function (pi: ExtensionAPI) {
     ctx_ = ctx;
   });
 
-  pi.on("agent_start", async (_event, ctx) => {
-    ctx_ = ctx;
-    if (!agentStart) agentStart = Date.now();
-  });
-
-  pi.on("turn_start", async (_event, ctx) => {
-    ctx_ = ctx;
+  // Initialize shimmer state. Factored out so both agent_start and turn_start
+  // can call it; turn_start skips when already initialized by agent_start.
+  function initTurn() {
     turnId++;
     turnActive = true;
     turnStart = Date.now();
@@ -385,6 +381,21 @@ export default function (pi: ExtensionAPI) {
     resetTurn();
     setMode("requesting");
     startShimmer();
+  }
+
+  // agent_start fires before turn_start and is the moment pi rebuilds the
+  // working loader. Initialize shimmer here so the loader picks up our
+  // message + indicator immediately instead of flashing "Working...".
+  pi.on("agent_start", async (_event, ctx) => {
+    ctx_ = ctx;
+    if (!agentStart) agentStart = Date.now();
+    if (!turnActive) initTurn();
+  });
+
+  pi.on("turn_start", async (_event, ctx) => {
+    ctx_ = ctx;
+    if (turnActive) return;   // already initialized by agent_start
+    initTurn();
   });
 
   pi.on("message_update", async (event, ctx) => {
