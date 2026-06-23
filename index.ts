@@ -209,7 +209,7 @@ export default function (pi: ExtensionAPI) {
       parts.push(formatDuration(elapsed));
     }
 
-    return parts;
+    return parts.reverse();
   }
 
   function isStalled(): boolean {

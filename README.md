@@ -37,11 +37,11 @@ No configuration needed — the extension works automatically once installed. Ju
 ### States
 
 ```
-· Building…  (thinking · ↓ 127 tokens · 5s)    ← requesting → thinking
+· Building…  (5s · ↓ 127 tokens · thinking)    ← requesting → thinking
 ✢ Cooking…                                     ← responding (no tools, simple)
-✳ Crunching…  (↓ 1,234 tokens · 12s)           ← responding with tokens
+✳ Crunching…  (12s · ↓ 1,234 tokens)           ← responding with tokens
 ✶ Crafting…                                    ← tool-input
-✻ Brewing…  (↓ 567 tokens · 1m 3s)             ← tool-use (flash animation)
+✻ Brewing…  (1m 3s · ↓ 567 tokens)             ← tool-use (flash animation)
 ✽ Crunched for 2m 5s                           ← completion (notify)
 ```
 
