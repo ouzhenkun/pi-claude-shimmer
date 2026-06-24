@@ -37,12 +37,13 @@ No configuration needed — the extension works automatically once installed. Ju
 ### States
 
 ```
-· Building…  (5s · ↓ 127 tokens · thinking)    ← requesting → thinking
-✢ Cooking…                                     ← responding (no tools, simple)
-✳ Crunching…  (12s · ↓ 1,234 tokens)           ← responding with tokens
-✶ Crafting…                                    ← tool-input
-✻ Brewing…  (1m 3s · ↓ 567 tokens)             ← tool-use (flash animation)
-✽ Crunched for 2m 5s                           ← completion (notify)
+· Building…                                     ← requesting (no status yet)
+✢ Crafting…  (thinking with high effort)        ← thinking (< 3s, no glow)
+✳ Crafting…  (↓ 127 tokens · thinking)          ← thinking with tokens
+✶ Cooking…   (↓ 1,234 tokens)                   ← responding (< 30s)
+✻ Crunching… (32s · ↓ 3,678 tokens)             ← responding after 30s
+✽ Brewing…   (1m 3s · ↓ 4,567 tokens)           ← tool-use (flash animation)
+✻ Crunched for 2m 5s                            ← completion (notify)
 ```
 
 ## Features at a Glance

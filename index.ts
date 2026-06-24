@@ -5,7 +5,7 @@
  * - Verb is picked once per turn and stays fixed
  * - Spinner glyph changes: ↑ for requesting, ↓ for thinking/responding/tool-use
  * - Shimmer sweep across the verb text
- * - Status line: thinking state, token count, elapsed time
+ * - Status line: elapsed time, token count, thinking state
  * - Stall detection: verb turns red after 3s of no tokens
  * - Completion: "✻ Worked for Ns"
  */
@@ -52,13 +52,12 @@ const SPINNER_FRAMES = [...GLYPHS, ...[...GLYPHS].reverse()];
 const RESET = "\x1b[0m";
 const ORANGE = "\x1b[38;2;215;119;87m";
 const DIM = "\x1b[38;2;153;153;153m";
-const RED = "\x1b[38;2;171;43;63m";
-
 // ─── Timing Constants ─────────────────────────────────────────────
 
-const SHIMMER_MS = 200;          // shimmer animation tick
+const SHIMMER_MS_REQUESTING = 50;   // shimmer tick when sending request
+const SHIMMER_MS_WORKING = 200;     // shimmer tick when receiving
 const SHIMMER_BAND = 4;          // highlight band width in chars
-const SHOW_TIMER_AFTER_MS = 30_000;
+const SHOW_TIMER_AFTER_MS = 5_000;
 const THOUGHT_DISPLAY_MS = 3_500;
 const STALL_TIMEOUT_MS = 3_000;
 const STALL_ERROR_RED: [number, number, number] = [171, 43, 63];
@@ -152,7 +151,6 @@ export default function (pi: ExtensionAPI) {
   let responseLen = 0;
   let lastTokenTime = 0;
   let turnActive = false;
-  let turnId = 0;
   let activeToolCount = 0;
 
   // Stall smooth interpolation (0→1)
@@ -205,7 +203,7 @@ export default function (pi: ExtensionAPI) {
       parts.push(`${arrow} ${formatCount(tokens)} tokens`);
     }
 
-    if (elapsed > SHOW_TIMER_AFTER_MS || thinkingDuration !== null || tokens > 0) {
+    if (elapsed > SHOW_TIMER_AFTER_MS) {
       parts.push(formatDuration(elapsed));
     }
 
@@ -227,14 +225,14 @@ export default function (pi: ExtensionAPI) {
     const parts = buildStatusParts();
     const reverse = mode !== "requesting";
     const baseHex = "#D77757";
-    const shimmerHex = "#F0C0A0";
+    const shimmerHex = "#F59575";
     const stalled = _stallFrame > 0;
 
     let verbText: string;
 
     if (mode === "tool-use") {
       // Flash effect: entire verb oscillates between base and shimmer (Claude Code style)
-      const flashOpacity = (Math.sin((shimmerFrame * SHIMMER_MS / 1000) * Math.PI) + 1) / 2;
+      const flashOpacity = (Math.sin((shimmerFrame * SHIMMER_MS_WORKING / 1000) * Math.PI) + 1) / 2;
       if (stalled) {
         const stallT = _stallFrame / STALL_TRANSITION_FRAMES;
         const baseC = hexToRgb(baseHex);
@@ -277,6 +275,7 @@ export default function (pi: ExtensionAPI) {
     stopShimmer();
     shimmerFrame = 0;
     updateDisplay();
+    const intervalMs = mode === "requesting" ? SHIMMER_MS_REQUESTING : SHIMMER_MS_WORKING;
     shimmerTimer = setInterval(() => {
       shimmerFrame++;
       // Stall smooth interpolation
@@ -294,7 +293,7 @@ export default function (pi: ExtensionAPI) {
         _displayedTokens = Math.min(_displayedTokens + increment, target);
       }
       updateDisplay();
-    }, SHIMMER_MS);
+    }, intervalMs);
   }
 
   function stopShimmer() {
@@ -306,7 +305,7 @@ export default function (pi: ExtensionAPI) {
 
   function setGlyphs() {
     if (!ctx_?.ui) return;
-    const intervalMs = mode === "requesting" ? 150 : 250;
+    const intervalMs = 120;
     ctx_.ui.setWorkingIndicator({
       frames: SPINNER_FRAMES.map((g) => ORANGE + g + RESET),
       intervalMs,
@@ -317,6 +316,11 @@ export default function (pi: ExtensionAPI) {
     if (mode === newMode) return;
     mode = newMode;
     setGlyphs();
+    // Restart shimmer timer with mode-appropriate interval
+    if (shimmerTimer) {
+      stopShimmer();
+      startShimmer();
+    }
   }
 
   function onThinkingEnd() {
@@ -373,7 +377,6 @@ export default function (pi: ExtensionAPI) {
   // Initialize shimmer state. Factored out so both agent_start and turn_start
   // can call it; turn_start skips when already initialized by agent_start.
   function initTurn() {
-    turnId++;
     turnActive = true;
     turnStart = Date.now();
     if (!agentStart) agentStart = turnStart;
