@@ -33,7 +33,7 @@ const VERBS = [
 // Past tense verbs for turn completion messages (from Claude Code)
 const COMPLETION_VERBS = [
   "Baked", "Brewed", "Churned", "Cogitated",
-  "Cooked", "Crunched", "Sautéed",
+  "Cooked", "Crunched", "Sautéed", "Worked",
 ];
 
 // ─── Glyphs ───────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ const DIM = "\x1b[38;2;153;153;153m";
 const SHIMMER_MS_REQUESTING = 50;   // shimmer tick when sending request
 const SHIMMER_MS_WORKING = 200;     // shimmer tick when receiving
 const SHIMMER_BAND = 4;          // highlight band width in chars
-const SHOW_TIMER_AFTER_MS = 5_000;
+const SHOW_TIMER_AFTER_MS = 30_000;
 const THOUGHT_DISPLAY_MS = 3_500;
 const STALL_TIMEOUT_MS = 3_000;
 const STALL_ERROR_RED: [number, number, number] = [171, 43, 63];
