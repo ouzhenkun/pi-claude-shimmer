@@ -56,6 +56,7 @@ const DIM = "\x1b[38;2;153;153;153m";
 
 const SHIMMER_MS_REQUESTING = 50;   // shimmer tick when sending request
 const SHIMMER_MS_WORKING = 200;     // shimmer tick when receiving
+const TOKEN_COUNTER_MS = 50;        // token counter tick
 const SHIMMER_BAND = 4;          // highlight band width in chars
 const SHOW_TIMER_AFTER_MS = 30_000;
 const THOUGHT_DISPLAY_MS = 3_500;
@@ -163,6 +164,7 @@ export default function (pi: ExtensionAPI) {
 
   // Timers
   let shimmerTimer: ReturnType<typeof setInterval> | null = null;
+  let tokenTimer: ReturnType<typeof setInterval> | null = null;
   let shimmerFrame = 0;
   let thoughtTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -290,21 +292,40 @@ export default function (pi: ExtensionAPI) {
       } else if (!stalled && _stallFrame > 0) {
         _stallFrame--;
       }
-      // Token counter animation mirrors Claude Code: smooth chars, display chars / 4.
-      const target = responseLen;
-      if (_displayedResponseLen < target) {
-        const gap = target - _displayedResponseLen;
-        const increment = gap < 70 ? 3 : gap < 200 ? Math.max(8, Math.ceil(gap * 0.15)) : 50;
-        _displayedResponseLen = Math.min(_displayedResponseLen + increment, target);
-      }
       updateDisplay();
     }, intervalMs);
+    startTokenCounter();
   }
 
   function stopShimmer() {
     if (shimmerTimer) {
       clearInterval(shimmerTimer);
       shimmerTimer = null;
+    }
+    stopTokenCounter();
+  }
+
+  // Token counter runs on its own fixed 50ms clock, independent of the shimmer
+  // tick (which slows to 200ms while working). Keeps the counter smooth like
+  // Claude Code regardless of the shimmer speed.
+  function startTokenCounter() {
+    if (tokenTimer) return;
+    tokenTimer = setInterval(() => {
+      // Smooth chars, display converts chars → tokens (mirrors Claude Code).
+      const target = responseLen;
+      if (_displayedResponseLen < target) {
+        const gap = target - _displayedResponseLen;
+        const increment = gap < 70 ? 3 : gap < 200 ? Math.max(8, Math.ceil(gap * 0.15)) : 50;
+        _displayedResponseLen = Math.min(_displayedResponseLen + increment, target);
+        updateDisplay();
+      }
+    }, TOKEN_COUNTER_MS);
+  }
+
+  function stopTokenCounter() {
+    if (tokenTimer) {
+      clearInterval(tokenTimer);
+      tokenTimer = null;
     }
   }
 
