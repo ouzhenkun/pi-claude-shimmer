@@ -149,14 +149,17 @@ export default function (pi: ExtensionAPI) {
   let thinkingDuration: number | null = null;
   let thoughtSetAt = 0;
   let responseLen = 0;
+  let currentAssistantLen = 0;
+  let currentTextBlockLen = 0;
+  let assistantMessageActive = false;
   let lastTokenTime = 0;
   let turnActive = false;
   let activeToolCount = 0;
 
   // Stall smooth interpolation (0→1)
   let _stallFrame = 0;
-  // Token smooth animation
-  let _displayedTokens = 0;
+  // Response-length smooth animation; display converts chars → tokens.
+  let _displayedResponseLen = 0;
 
   // Timers
   let shimmerTimer: ReturnType<typeof setInterval> | null = null;
@@ -180,7 +183,9 @@ export default function (pi: ExtensionAPI) {
 
   function buildStatusParts(): string[] {
     const elapsed = Date.now() - (agentStart || turnStart);
-    const tokens = Math.max(0, _displayedTokens);
+    const tokens = Math.round(Math.max(0, _displayedResponseLen) / 4);
+    const showTimer = elapsed > SHOW_TIMER_AFTER_MS;
+    const showTokens = tokens > 0 && (mode !== "requesting" || showTimer);
     const parts: string[] = [];
 
     if (mode === "thinking" && thinkingDuration === null) {
@@ -198,12 +203,12 @@ export default function (pi: ExtensionAPI) {
       parts.push(`thought for ${Math.max(1, Math.round(thinkingDuration / 1000))}s`);
     }
 
-    if (tokens > 0) {
+    if (showTokens) {
       const arrow = mode === "requesting" ? ARROW_REQUESTING : ARROW_WORKING;
       parts.push(`${arrow} ${formatCount(tokens)} tokens`);
     }
 
-    if (elapsed > SHOW_TIMER_AFTER_MS) {
+    if (showTimer) {
       parts.push(formatDuration(elapsed));
     }
 
@@ -285,12 +290,12 @@ export default function (pi: ExtensionAPI) {
       } else if (!stalled && _stallFrame > 0) {
         _stallFrame--;
       }
-      // Token smooth animation
-      const target = Math.round(responseLen / 4);
-      if (_displayedTokens < target) {
-        const gap = target - _displayedTokens;
+      // Token counter animation mirrors Claude Code: smooth chars, display chars / 4.
+      const target = responseLen;
+      if (_displayedResponseLen < target) {
+        const gap = target - _displayedResponseLen;
         const increment = gap < 70 ? 3 : gap < 200 ? Math.max(8, Math.ceil(gap * 0.15)) : 50;
-        _displayedTokens = Math.min(_displayedTokens + increment, target);
+        _displayedResponseLen = Math.min(_displayedResponseLen + increment, target);
       }
       updateDisplay();
     }, intervalMs);
@@ -351,7 +356,7 @@ export default function (pi: ExtensionAPI) {
     }, remaining);
   }
 
-  function resetTurn() {
+  function resetTurn(resetOutput = false) {
     stopShimmer();
     if (thoughtTimer) {
       clearTimeout(thoughtTimer);
@@ -360,9 +365,14 @@ export default function (pi: ExtensionAPI) {
     ctx_?.ui?.setWorkingMessage();
     mode = "requesting";
     thinkingDuration = null;
-    responseLen = 0;
+    if (resetOutput) {
+      responseLen = 0;
+      _displayedResponseLen = 0;
+    }
+    currentAssistantLen = 0;
+    currentTextBlockLen = 0;
+    assistantMessageActive = false;
     _stallFrame = 0;
-    _displayedTokens = 0;
     lastTokenTime = 0;
     activeToolCount = 0;
     setGlyphs();
@@ -376,12 +386,12 @@ export default function (pi: ExtensionAPI) {
 
   // Initialize shimmer state. Factored out so both agent_start and turn_start
   // can call it; turn_start skips when already initialized by agent_start.
-  function initTurn() {
+  function initTurn(resetOutput = false) {
     turnActive = true;
     turnStart = Date.now();
     if (!agentStart) agentStart = turnStart;
     verb = pickVerb();
-    resetTurn();
+    resetTurn(resetOutput);
     setMode("requesting");
     startShimmer();
   }
@@ -392,7 +402,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("agent_start", async (_event, ctx) => {
     ctx_ = ctx;
     if (!agentStart) agentStart = Date.now();
-    if (!turnActive) initTurn();
+    if (!turnActive) initTurn(true);
   });
 
   pi.on("turn_start", async (_event, ctx) => {
@@ -424,6 +434,11 @@ export default function (pi: ExtensionAPI) {
         if (mode !== "responding") {
           setMode("responding");
         }
+        if (!assistantMessageActive) {
+          assistantMessageActive = true;
+          currentAssistantLen = 0;
+        }
+        currentTextBlockLen = 0;
         lastTokenTime = Date.now();
         break;
 
@@ -433,13 +448,21 @@ export default function (pi: ExtensionAPI) {
         }
         lastTokenTime = Date.now();
         if (typeof evt.delta === "string") {
-          responseLen += evt.delta.length;
+          const len = evt.delta.length;
+          responseLen += len;
+          currentAssistantLen += len;
+          currentTextBlockLen += len;
         }
         break;
 
       case "text_end":
         if (typeof evt.content === "string") {
-          responseLen = Math.max(responseLen, evt.content.length);
+          const missing = evt.content.length - currentTextBlockLen;
+          if (missing > 0) {
+            responseLen += missing;
+            currentAssistantLen += missing;
+          }
+          currentTextBlockLen = evt.content.length;
         }
         break;
 
@@ -454,12 +477,19 @@ export default function (pi: ExtensionAPI) {
           setMode("tool-use");
         }
         if (evt.message?.content) {
-          responseLen = (evt.message.content as any[]).reduce(
+          const finalAssistantLen = (evt.message.content as any[]).reduce(
             (s: number, b: any) =>
               s + (b.type === "text" && typeof b.text === "string" ? b.text.length : 0),
             0,
           );
+          const missing = finalAssistantLen - currentAssistantLen;
+          if (missing > 0) {
+            responseLen += missing;
+          }
+          currentAssistantLen = finalAssistantLen;
         }
+        assistantMessageActive = false;
+        currentTextBlockLen = 0;
         break;
     }
   });
@@ -487,7 +517,6 @@ export default function (pi: ExtensionAPI) {
       thinkingDuration = null;
     }
 
-    responseLen = 0;
     activeToolCount = 0;
   });
 
