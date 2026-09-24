@@ -63,6 +63,9 @@ const THOUGHT_DISPLAY_MS = 3_500;
 const STALL_TIMEOUT_MS = 3_000;
 const STALL_ERROR_RED: [number, number, number] = [171, 43, 63];
 const STALL_TRANSITION_FRAMES = 30;
+// Working status is embedded in the editor border, so only the space between
+// "── ⠋ " and the trailing rule is available for the message.
+const BORDER_RESERVE_COLS = 12;
 const THINKING_GLOW_DELAY_MS = 3_000;
 const THINKING_GLOW_PERIOD_MS = 2_000;
 const THINKING_BASE_RGB: [number, number, number] = [153, 153, 153];
@@ -83,6 +86,11 @@ function formatDuration(ms: number): string {
 
 function formatCount(n: number): string {
   return new Intl.NumberFormat("en-US").format(n);
+}
+
+/** Visible length after dropping ANSI escapes (status parts are ASCII only). */
+function visibleLen(text: string): number {
+  return text.replace(/\x1b\[[0-9;]*m/g, "").length;
 }
 
 // ─── Shimmer Engine ───────────────────────────────────────────────
@@ -268,7 +276,22 @@ export default function (pi: ExtensionAPI) {
 
     let msg = verbText;
     if (parts.length > 0) {
-      msg += ` ${DIM}(${parts.join(" · ")})${RESET}`;
+      // Narrower than the old full-width row, so shed the least useful parts first:
+      // effort suffix, then elapsed time, then state word, then nothing.
+      const budget = Math.max(12, (process.stdout.columns ?? 80) - BORDER_RESERVE_COLS);
+      const dropEffort = (list: string[]) =>
+        list.map((part) => part.replace(/ with [^ ]+ effort/, ""));
+      const candidates = [
+        parts,
+        dropEffort(parts),
+        dropEffort(parts.slice(1)),
+        parts.filter((part) => part.includes(" tokens")),
+        parts.slice(-1),
+      ].filter((list) => list.length > 0);
+      const fits = (list: string[]) =>
+        visibleLen(verbText) + 3 + visibleLen(list.join(" · ")) <= budget;
+      const shown = candidates.find(fits);
+      if (shown) msg += ` ${DIM}(${shown.join(" · ")})${RESET}`;
     }
     return msg;
   }
