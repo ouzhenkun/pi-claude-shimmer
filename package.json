@@ -1,6 +1,6 @@
 {
   "name": "pi-claude-shimmer",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Claude Code-style working spinner for Pi — shimmer, thinking glow, token count, stall detection",
   "keywords": [
     "pi",
@@ -22,7 +22,7 @@
     "url": "https://github.com/ouzhenkun/pi-claude-shimmer/issues"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-coding-agent": ">=1.2.0"
   },
   "pi": {
     "extensions": [

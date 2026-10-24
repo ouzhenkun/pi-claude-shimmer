@@ -576,7 +576,7 @@ export default function (pi: ExtensionAPI) {
     if (ctx_?.ui) {
       const verb = COMPLETION_VERBS[Math.floor(Math.random() * COMPLETION_VERBS.length)];
       const msg = `${DIM}✻ ${verb} for ${formatDuration(elapsed)}${RESET}`;
-      ctx_.ui.notify(msg, "success");
+      ctx_.ui.notify(msg, "info");
     }
   });
 
