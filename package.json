@@ -21,6 +21,9 @@
   "bugs": {
     "url": "https://github.com/ouzhenkun/pi-claude-shimmer/issues"
   },
+  "files": [
+    "index.ts"
+  ],
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": ">=1.2.0"
   },
